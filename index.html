@@ -90,8 +90,10 @@
     border:3px solid #333; border-radius:14px; cursor:pointer;
     font-family:'Nunito',sans-serif; font-weight:900; font-size:17px; transition:all .12s;
   }
-  .mode-btn.easy { background:linear-gradient(135deg,#a8edea,#fed6e3); color:#333; box-shadow:0 5px 0 #888; }
-  .mode-btn.hard { background:linear-gradient(135deg,#ffecd2,#fcb69f); color:#333; box-shadow:0 5px 0 #888; }
+  .mode-btn.mode1 { background:linear-gradient(135deg,#a8edea,#fed6e3); color:#333; box-shadow:0 5px 0 #888; }
+  .mode-btn.mode2 { background:linear-gradient(135deg,#ffecd2,#fcb69f); color:#333; box-shadow:0 5px 0 #888; }
+  .mode-btn.mode3 { background:linear-gradient(135deg,#ffd89b,#19547b); color:#fff; box-shadow:0 5px 0 #555; }
+  .mode-btn.mode4 { background:linear-gradient(135deg,#f953c6,#b91d73); color:#fff; box-shadow:0 5px 0 #555; }
   .mode-btn:hover  { transform:translateY(-2px); box-shadow:0 7px 0 #888; }
   .mode-btn:active { transform:translateY(3px);  box-shadow:0 2px 0 #888; }
   .mode-btn .btn-sub { font-size:13px; font-weight:700; color:#666; display:block; margin-top:3px; }
@@ -149,8 +151,11 @@
   #paused-overlay.show { display:flex; }
   .pause-box { background:white; padding:38px 48px; border-radius:20px; text-align:center; border:4px solid #333; }
   .pause-box h2 { font-family:'Press Start 2P',monospace; font-size:18px; margin-bottom:20px; color:#333; }
-  #resume-btn { padding:13px 26px; background:#4CAF50; color:white; border:3px solid #333; border-radius:12px; font-family:'Press Start 2P',monospace; font-size:11px; cursor:pointer; box-shadow:0 5px 0 #2e7d32; }
+  .pause-btns { display:flex; flex-direction:column; gap:10px; align-items:center; }
+  #resume-btn { padding:13px 26px; background:#4CAF50; color:white; border:3px solid #333; border-radius:12px; font-family:'Press Start 2P',monospace; font-size:11px; cursor:pointer; box-shadow:0 5px 0 #2e7d32; width:100%; }
   #resume-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #2e7d32; }
+  #pause-change-mode-btn { padding:13px 26px; background:white; color:#333; border:3px solid #333; border-radius:12px; font-family:'Press Start 2P',monospace; font-size:11px; cursor:pointer; box-shadow:0 5px 0 #888; width:100%; }
+  #pause-change-mode-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #888; }
 
   /* End screen */
   #end-screen { display:none; text-align:center; }
@@ -187,7 +192,10 @@
 <div id="paused-overlay">
   <div class="pause-box">
     <h2>⏸ PAUSED</h2>
-    <button id="resume-btn" onclick="resumeGame()">▶ RESUME</button>
+    <div class="pause-btns">
+      <button id="resume-btn" onclick="resumeGame()">▶ RESUME</button>
+      <button id="pause-change-mode-btn" onclick="changeMode()">🔀 CHANGE MODE</button>
+    </div>
   </div>
 </div>
 
@@ -195,25 +203,29 @@
   <div class="game-title">🦕 MATH DINO 🦕</div>
 
   <div class="high-score-bar">
-    <div class="hs-box" id="hs-easy-box">
-      <span class="hs-label">± BEST</span>
-      <div class="hs-val" id="hs-easy">0</div>
-    </div>
-    <div class="hs-box" id="hs-hard-box">
-      <span class="hs-label">×÷ BEST</span>
-      <div class="hs-val" id="hs-hard">0</div>
-    </div>
+    <div class="hs-box" id="hs-mode1-box"><span class="hs-label">MODE 1</span><div class="hs-val" id="hs-mode1">0</div></div>
+    <div class="hs-box" id="hs-mode2-box"><span class="hs-label">MODE 2</span><div class="hs-val" id="hs-mode2">0</div></div>
+    <div class="hs-box" id="hs-mode3-box"><span class="hs-label">MODE 3</span><div class="hs-val" id="hs-mode3">0</div></div>
+    <div class="hs-box" id="hs-mode4-box"><span class="hs-label">MODE 4</span><div class="hs-val" id="hs-mode4">0</div></div>
   </div>
 
   <div class="panel" id="mode-screen">
     <h2>CHOOSE<br>YOUR MODE!</h2>
-    <button class="mode-btn easy" onclick="startGame('easy')">
-      ➕ ➖ Easy Mode
-      <span class="btn-sub">Addition &amp; Subtraction only</span>
+    <button class="mode-btn mode1" onclick="startGame('mode1')">
+      🟢 Mode 1
+      <span class="btn-sub">Addition &amp; Subtraction (1–20)</span>
     </button>
-    <button class="mode-btn hard" onclick="startGame('hard')">
-      ✖️ ➗ Hard Mode
-      <span class="btn-sub">All four operations!</span>
+    <button class="mode-btn mode2" onclick="startGame('mode2')">
+      🔵 Mode 2
+      <span class="btn-sub">All four operations</span>
+    </button>
+    <button class="mode-btn mode3" onclick="startGame('mode3')">
+      🟠 Mode 3
+      <span class="btn-sub">All operations + negative numbers</span>
+    </button>
+    <button class="mode-btn mode4" onclick="startGame('mode4')">
+      🔴 Mode 4
+      <span class="btn-sub">Everything + square roots</span>
     </button>
   </div>
 
@@ -480,21 +492,22 @@ function dinoSad() {
 // ════════════════════════════════════════
 let score=0, timeLeft=60, gameTimer=null, isPaused=false;
 let currentMode=null, correctAnswer=0, gameActive=false;
-let highScores = {easy:0, hard:0};
+let highScores = {mode1:0, mode2:0, mode3:0, mode4:0};
 
 function loadHS() {
-  try { const s=localStorage.getItem('mathDinoHS'); if(s) highScores=JSON.parse(s); } catch(e){}
+  try { const s=localStorage.getItem('mathDinoHS4'); if(s) highScores=JSON.parse(s); } catch(e){}
   updateHSDisplay();
 }
 function saveHS() {
-  try { localStorage.setItem('mathDinoHS', JSON.stringify(highScores)); } catch(e){}
+  try { localStorage.setItem('mathDinoHS4', JSON.stringify(highScores)); } catch(e){}
 }
 function updateHSDisplay() {
-  document.getElementById('hs-easy').textContent = highScores.easy;
-  document.getElementById('hs-hard').textContent = highScores.hard;
+  ['mode1','mode2','mode3','mode4'].forEach(m => {
+    document.getElementById(`hs-${m}`).textContent = highScores[m]||0;
+    const box = document.getElementById(`hs-${m}-box`);
+    if (box) box.classList.toggle('active-mode', currentMode===m);
+  });
   document.getElementById('current-best').textContent = highScores[currentMode]||0;
-  document.getElementById('hs-easy-box').classList.toggle('active-mode', currentMode==='easy');
-  document.getElementById('hs-hard-box').classList.toggle('active-mode', currentMode==='hard');
 }
 
 function startGame(mode) {
@@ -546,21 +559,76 @@ function changeMode() {
   document.getElementById('end-screen').style.display='none';
   document.getElementById('game-screen').style.display='none';
   document.getElementById('mode-screen').style.display='block';
-  document.getElementById('hs-easy-box').classList.remove('active-mode');
-  document.getElementById('hs-hard-box').classList.remove('active-mode');
-  startScene(); // keep dino visible on menu
+  ['mode1','mode2','mode3','mode4'].forEach(m => {
+    const box = document.getElementById(`hs-${m}-box`);
+    if (box) box.classList.remove('active-mode');
+  });
+  startScene();
 }
 
 // ── Questions ──
 function generateQuestion() {
-  const ops = currentMode==='easy' ? ['+','-'] : ['+','-','×','÷'];
-  const op  = ops[Math.floor(Math.random()*ops.length)];
-  let a,b,display;
-  const isEasy = currentMode==='easy';
-  if (op==='+') { a=rand(1,isEasy?20:30);b=rand(1,isEasy?20:30); correctAnswer=a+b; display=`${a} + ${b} = ?`; }
-  else if (op==='-') { a=rand(2,isEasy?20:30);b=rand(1,a); correctAnswer=a-b; display=`${a} - ${b} = ?`; }
-  else if (op==='×') { a=rand(2,9);b=rand(2,9); correctAnswer=a*b; display=`${a} × ${b} = ?`; }
-  else { b=rand(2,9); correctAnswer=rand(2,9); a=b*correctAnswer; display=`${a} ÷ ${b} = ?`; }
+  let a, b, display;
+
+  if (currentMode === 'mode1') {
+    // Addition & subtraction, numbers 1-20
+    const ops = ['+', '-'];
+    const op  = ops[Math.floor(Math.random()*ops.length)];
+    if (op==='+') { a=rand(1,20); b=rand(1,20); correctAnswer=a+b; display=`${a} + ${b} = ?`; }
+    else          { a=rand(2,20); b=rand(1,a);  correctAnswer=a-b; display=`${a} - ${b} = ?`; }
+
+  } else if (currentMode === 'mode2') {
+    // All four ops, moderate numbers
+    const ops = ['+','-','×','÷'];
+    const op  = ops[Math.floor(Math.random()*ops.length)];
+    if (op==='+') { a=rand(1,30); b=rand(1,30); correctAnswer=a+b; display=`${a} + ${b} = ?`; }
+    else if (op==='-') { a=rand(2,30); b=rand(1,a); correctAnswer=a-b; display=`${a} - ${b} = ?`; }
+    else if (op==='×') { a=rand(2,9); b=rand(2,9); correctAnswer=a*b; display=`${a} × ${b} = ?`; }
+    else { b=rand(2,9); correctAnswer=rand(2,9); a=b*correctAnswer; display=`${a} ÷ ${b} = ?`; }
+
+  } else if (currentMode === 'mode3') {
+    // All four ops + negative numbers
+    const ops = ['+','-','×','÷'];
+    const op  = ops[Math.floor(Math.random()*ops.length)];
+    if (op==='+') {
+      a=randNeg(-20,20); b=randNeg(-20,20); correctAnswer=a+b;
+      display=`${fmt(a)} + ${fmt(b)} = ?`;
+    } else if (op==='-') {
+      a=randNeg(-20,20); b=randNeg(-20,20); correctAnswer=a-b;
+      display=`${fmt(a)} - ${fmt(b)} = ?`;
+    } else if (op==='×') {
+      a=randNeg(-9,9,true); b=randNeg(-9,9,true); correctAnswer=a*b;
+      display=`${fmt(a)} × ${fmt(b)} = ?`;
+    } else {
+      b=randNeg(-9,9,true); correctAnswer=randNeg(-9,9,true); a=b*correctAnswer;
+      display=`${fmt(a)} ÷ ${fmt(b)} = ?`;
+    }
+
+  } else {
+    // Mode 4: everything + square roots
+    const ops = ['+','-','×','÷','√'];
+    const op  = ops[Math.floor(Math.random()*ops.length)];
+    if (op==='+') {
+      a=randNeg(-20,20); b=randNeg(-20,20); correctAnswer=a+b;
+      display=`${fmt(a)} + ${fmt(b)} = ?`;
+    } else if (op==='-') {
+      a=randNeg(-20,20); b=randNeg(-20,20); correctAnswer=a-b;
+      display=`${fmt(a)} - ${fmt(b)} = ?`;
+    } else if (op==='×') {
+      a=randNeg(-9,9,true); b=randNeg(-9,9,true); correctAnswer=a*b;
+      display=`${fmt(a)} × ${fmt(b)} = ?`;
+    } else if (op==='÷') {
+      b=randNeg(-9,9,true); correctAnswer=randNeg(-9,9,true); a=b*correctAnswer;
+      display=`${fmt(a)} ÷ ${fmt(b)} = ?`;
+    } else {
+      // Square root — pick a perfect square 1-144
+      const roots = [1,2,3,4,5,6,7,8,9,10,11,12];
+      correctAnswer = roots[Math.floor(Math.random()*roots.length)];
+      a = correctAnswer * correctAnswer;
+      display = `√${a} = ?`;
+    }
+  }
+
   document.getElementById('question-text').textContent=display;
   const inp=document.getElementById('answer-input');
   inp.value=''; inp.classList.remove('correct','wrong');
@@ -569,6 +637,14 @@ function generateQuestion() {
 }
 
 function rand(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
+// Random non-zero integer in range, optionally excluding zero
+function randNeg(min,max,nonZero=false) {
+  let v;
+  do { v = Math.floor(Math.random()*(max-min+1))+min; } while (nonZero && v===0);
+  return v;
+}
+// Format negative numbers with parentheses for clarity
+function fmt(n) { return n < 0 ? `(${n})` : `${n}`; }
 
 function submitAnswer() {
   if (!gameActive||isPaused) return;
