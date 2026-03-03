@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Math Dino Game</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #eef;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+  canvas {
+    border: 2px solid #333;
+    background: #fff;
+    margin-top: 20px;
+  }
+  .controls, .scoreboard {
+    margin-top: 10px;
+  }
+  button {
+    margin: 0 5px;
+    padding: 5px 10px;
+    font-size: 16px;
+  }
+  #question {
+    font-size: 24px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Math Dino Game</h1>
+
+<div>
+  <label>Select problem type: </label>
+  <select id="problemType">
+    <option value="addsub">Addition & Subtraction</option>
+    <option value="all">Add, Sub, Mul, Div</option>
+  </select>
+  <button id="startBtn">Start</button>
+</div>
+
+<div id="question"></div>
+<input type="number" id="answerInput" placeholder="Your answer" style="font-size: 18px;" disabled>
+
+<div class="controls">
+  <span id="timer">60</span> seconds left
+  <button onclick="togglePause()">Pause</button>
+  <button onclick="restart()">Restart</button>
+</div>
+
+<div class="scoreboard">
+  Score: <span id="score">0</span> | High Score: <span id="highScore">0</span>
+</div>
+
+<canvas id="gameCanvas" width="600" height="150"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const questionEl = document.getElementById('question');
+const answerInput = document.getElementById('answerInput');
+const timerEl = document.getElementById('timer');
+const scoreEl = document.getElementById('score');
+const highScoreEl = document.getElementById('highScore');
+const problemTypeSelect = document.getElementById('problemType');
+const startBtn = document.getElementById('startBtn');
+
+let timeLeft = 60;
+let timerInterval;
+let paused = false;
+let score = 0;
+let highScore = 0;
+let currentProblem = {};
+let problemType = 'addsub';
+let dinoX = 50;
+const wifiSymbols = 10;
+const wifiPositions = Array.from({length:wifiSymbols}, (_,i) => 50 + i*50);
+
+function loadHighScore() {
+  const key = problemType + "_high";
+  highScore = parseInt(localStorage.getItem(key)) || 0;
+  highScoreEl.textContent = highScore;
+}
+
+function saveHighScore() {
+  const key = problemType + "_high";
+  if(score > highScore){
+    localStorage.setItem(key, score);
+    highScoreEl.textContent = score;
+  }
+}
+
+function getRandomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function generateProblem() {
+  let a = getRandomInt(1,20);
+  let b = getRandomInt(1,20);
+  let op = '+';
+  if(problemType === 'addsub'){
+    op = Math.random()<0.5?'+':'-';
+  } else {
+    const ops = ['+','-','*','/'];
+    op = ops[getRandomInt(0,3)];
+    if(op === '/'){
+      a = a * b; // ensure integer division
+    }
+  }
+  currentProblem = {a,b,op};
+  questionEl.textContent = `${a} ${op} ${b} = ?`;
+}
+
+function checkAnswer(){
+  const val = parseInt(answerInput.value);
+  let correct = false;
+  switch(currentProblem.op){
+    case '+': correct = val === currentProblem.a + currentProblem.b; break;
+    case '-': correct = val === currentProblem.a - currentProblem.b; break;
+    case '*': correct = val === currentProblem.a * currentProblem.b; break;
+    case '/': correct = val === currentProblem.a / currentProblem.b; break;
+  }
+  if(correct) score++;
+  else score = Math.max(0,score-1);
+  scoreEl.textContent = score;
+  answerInput.value = '';
+  generateProblem();
+  drawCanvas();
+}
+
+function startGame() {
+  problemType = problemTypeSelect.value;
+  loadHighScore();
+  score = 0;
+  scoreEl.textContent = score;
+  timeLeft = 60;
+  timerEl.textContent = timeLeft;
+  answerInput.disabled = false;
+  answerInput.focus();
+  generateProblem();
+  drawCanvas();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=> {
+    if(!paused){
+      timeLeft--;
+      timerEl.textContent = timeLeft;
+      if(timeLeft <=0){
+        clearInterval(timerInterval);
+        answerInput.disabled = true;
+        saveHighScore();
+        questionEl.textContent = "Time's up! Your score: "+score;
+      }
+    }
+  },1000);
+}
+
+function togglePause(){
+  paused = !paused;
+}
+
+function restart(){
+  startGame();
+}
+
+answerInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    checkAnswer();
+  }
+});
+
+// --- Canvas ---
+function drawCanvas(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // draw wifi symbols
+  for(let i=0;i<wifiSymbols;i++){
+    ctx.fillStyle = '#999';
+    ctx.fillText('\u{1F4F6}', wifiPositions[i], 50);
+  }
+  // dino eats wifi symbols as score increases
+  dinoX = 50 + Math.min(score, wifiSymbols)*50;
+  ctx.fillStyle = 'green';
+  ctx.fillRect(dinoX-20, 80, 40, 40); // simple rectangle dino
+  ctx.fillStyle = 'black';
+  ctx.fillText('🦖', dinoX-15, 105);
+}
+
+// init
+ctx.font = "30px Arial";
+
+startBtn.addEventListener('click', startGame);
+
+</script>
+</body>
+</html>
